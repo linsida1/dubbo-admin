@@ -24,22 +24,18 @@ import org.apache.dubbo.metadata.definition.model.MethodDefinition;
 import org.apache.dubbo.metadata.definition.model.ServiceDefinition;
 import org.apache.dubbo.metadata.definition.model.TypeDefinition;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ServiceTestUtil {
     private static Pattern COLLECTION_PATTERN = Pattern.compile("^java\\.util\\..*(Set|List|Queue|Collection|Deque)(<.*>)*$");
-    private static Pattern MAP_PATTERN = Pattern.compile("^java\\.util\\..*Map.*(<.*>)*$");
+    private static Pattern MAP_PATTERN        = Pattern.compile("^java\\.util\\..*Map.*(<.*>)*$");
 
     public static boolean sameMethod(MethodDefinition m, String methodSig) {
-        String name = m.getName();
-        String[] parameters = m.getParameterTypes();
-        StringBuilder sb = new StringBuilder();
+        String        name       = m.getName();
+        String[]      parameters = m.getParameterTypes();
+        StringBuilder sb         = new StringBuilder();
         sb.append(name).append("~");
         for (String parameter : parameters) {
             sb.append(parameter).append(";");
@@ -50,9 +46,9 @@ public class ServiceTestUtil {
 
     public static MethodMetadata generateMethodMeta(FullServiceDefinition serviceDefinition, MethodDefinition methodDefinition) {
         MethodMetadata methodMetadata = new MethodMetadata();
-        String[] parameterTypes = methodDefinition.getParameterTypes();
-        String returnType = methodDefinition.getReturnType();
-        String signature = methodDefinition.getName() + "~" + String.join(";", parameterTypes);
+        String[]       parameterTypes = methodDefinition.getParameterTypes();
+        String         returnType     = methodDefinition.getReturnType();
+        String         signature      = methodDefinition.getName() + "~" + String.join(";", parameterTypes);
         methodMetadata.setSignature(signature);
         methodMetadata.setReturnType(returnType);
         List<Object> parameters = generateParameterTypes(parameterTypes, serviceDefinition);
@@ -91,14 +87,16 @@ public class ServiceTestUtil {
     }
 
     private static void generateComplexType(ServiceDefinition sd, TypeDefinition td, Map<String, Object> holder) {
-        for (Map.Entry<String, TypeDefinition> entry : td.getProperties().entrySet()) {
+        for (Map.Entry<String, String> entry : td.getProperties().entrySet()) {
             if (isPrimitiveType(td)) {
                 holder.put(entry.getKey(), generatePrimitiveType(td));
             } else {
-                generateEnclosedType(holder, entry.getKey(), sd, entry.getValue());
+                // generateEnclosedType(holder, entry.getKey(), sd, entry.getValue());
+                generateEnclosedType(holder, entry.getKey(), sd, new TypeDefinition(entry.getValue()));
             }
         }
     }
+
     private static Object generateComplexType(ServiceDefinition sd, TypeDefinition td) {
         Map<String, Object> holder = new HashMap<>();
         generateComplexType(sd, td, holder);
@@ -106,13 +104,13 @@ public class ServiceTestUtil {
     }
 
     private static boolean isMap(TypeDefinition td) {
-        String type = StringUtils.substringBefore(td.getType(), "<");
+        String  type    = StringUtils.substringBefore(td.getType(), "<");
         Matcher matcher = MAP_PATTERN.matcher(type);
         return matcher.matches();
     }
 
     private static boolean isCollection(TypeDefinition td) {
-        String type = StringUtils.substringBefore(td.getType(), "<");
+        String  type    = StringUtils.substringBefore(td.getType(), "<");
         Matcher matcher = COLLECTION_PATTERN.matcher(type);
         return matcher.matches();
     }
@@ -198,11 +196,12 @@ public class ServiceTestUtil {
         type = StringUtils.substringBefore(type, ">");
         if (StringUtils.isEmpty(type)) {
             // 如果 collection 类型未声明，则生成空 collection
-            return new Object[] {};
+            return new Object[]{};
         }
         return new Object[]{generateType(sd, type)};
 
     }
+
     private static Object generateArrayType(ServiceDefinition sd, TypeDefinition td) {
         String type = StringUtils.substringBeforeLast(td.getType(), "[]");
         return new Object[]{generateType(sd, type)};
